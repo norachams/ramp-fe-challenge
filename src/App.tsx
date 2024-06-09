@@ -14,6 +14,7 @@ export function App() {
   const { data: paginatedTransactions, ...paginatedTransactionsUtils } = usePaginatedTransactions()
   const { data: transactionsByEmployee, ...transactionsByEmployeeUtils } = useTransactionsByEmployee()
   const [isLoading, setIsLoading] = useState(false)
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee>(EMPTY_EMPLOYEE); // Initialize with EMPTY_EMPLOYEE
 
   const transactions = useMemo(
     () => paginatedTransactions?.data ?? transactionsByEmployee ?? null,
@@ -25,7 +26,7 @@ export function App() {
     transactionsByEmployeeUtils.invalidateData()
 
     await employeeUtils.fetchAll()
-    setIsLoading(false) //changed loading location to after employees instead of after paginatedTransacations
+    setIsLoading(false) //BUG 5: changed loading location to after employees instead of after paginatedTransacations
 
     await paginatedTransactionsUtils.fetchAll()
   }, [employeeUtils, paginatedTransactionsUtils, transactionsByEmployeeUtils])
@@ -44,6 +45,28 @@ export function App() {
     }
   }, [employeeUtils.loading, employees, loadAllTransactions])
 
+
+  const handleEmployeeChange = async (newValue: Employee | null) => {
+    if (newValue == null) {
+      return;
+    }
+    setSelectedEmployee(newValue);
+    if (newValue.id === EMPTY_EMPLOYEE.id) {
+      await loadAllTransactions();
+    } else {
+      await loadTransactionsByEmployee(newValue.id);
+    }
+  };
+
+
+  // BUG 6: Function to check if there are more transactions to load
+  const hasMoreTransactions = useMemo(() => {
+    return paginatedTransactions?.nextPage !== null;
+  }, [paginatedTransactions]);
+
+  //const shouldShowLoadMoreButton = transactions !== null && selectedEmployee?.id === EMPTY_EMPLOYEE.id && hasMoreTransactions;
+
+
   return (
     <Fragment>
       <main className="MainContainer">
@@ -61,16 +84,7 @@ export function App() {
             value: item.id,
             label: `${item.firstName} ${item.lastName}`,
           })}
-          onChange={async (newValue) => {
-            if (newValue === null) {
-              return
-            }
-            else if (newValue.id === ""){
-
-              await loadAllTransactions()
-            }
-            else await loadTransactionsByEmployee(newValue.id)
-          }}
+          onChange={handleEmployeeChange}
         />
 
         <div className="RampBreak--l" />
@@ -78,13 +92,13 @@ export function App() {
         <div className="RampGrid">
           <Transactions transactions={transactions} />
 
-          {transactions !== null && (
+          {transactions !== null && selectedEmployee?.id === EMPTY_EMPLOYEE.id && hasMoreTransactions && (
             <button
               className="RampButton"
-              disabled={paginatedTransactionsUtils.loading}
+              disabled={paginatedTransactionsUtils.loading} 
               onClick={async () => {
-                await loadAllTransactions()
-              }}
+                await paginatedTransactionsUtils.fetchAll(); 
+   }}
             >
               View More
             </button>
