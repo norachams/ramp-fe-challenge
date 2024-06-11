@@ -15,6 +15,7 @@ export function App() {
   const { data: transactionsByEmployee, ...transactionsByEmployeeUtils } = useTransactionsByEmployee()
   const [isLoading, setIsLoading] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee>(EMPTY_EMPLOYEE); // Initialize with EMPTY_EMPLOYEE
+  const [approvals, setApprovals] = useState<{ [key: string]: boolean }>({})
 
   const transactions = useMemo(
     () => paginatedTransactions?.data ?? transactionsByEmployee ?? null,
@@ -58,6 +59,9 @@ export function App() {
     }
   };
 
+  const handleApprovalChange = (transactionId: string, newValue: boolean) => {
+    setApprovals((prev) => ({ ...prev, [transactionId]: newValue }))
+  }
 
   // BUG 6: Function to check if there are more transactions to load
   const hasMoreTransactions = useMemo(() => {
@@ -65,7 +69,7 @@ export function App() {
   }, [paginatedTransactions]);
 
   //const shouldShowLoadMoreButton = transactions !== null && selectedEmployee?.id === EMPTY_EMPLOYEE.id && hasMoreTransactions;
-
+ 
 
   return (
     <Fragment>
@@ -84,15 +88,19 @@ export function App() {
             value: item.id,
             label: `${item.firstName} ${item.lastName}`,
           })}
-          onChange={handleEmployeeChange}
+          onChange={handleEmployeeChange} 
         />
 
         <div className="RampBreak--l" />
 
         <div className="RampGrid">
-          <Transactions transactions={transactions} />
+          <Transactions transactions={transactions}
+          approvals={approvals}
+          onApprovalChange={handleApprovalChange}
+          
+          />
 
-          {transactions !== null && selectedEmployee?.id === EMPTY_EMPLOYEE.id && hasMoreTransactions && (
+          {transactions !== null && selectedEmployee?.id === EMPTY_EMPLOYEE.id && hasMoreTransactions && ( //bug 6: remove view more button ones all transactiosn are loaded
             <button
               className="RampButton"
               disabled={paginatedTransactionsUtils.loading} 
